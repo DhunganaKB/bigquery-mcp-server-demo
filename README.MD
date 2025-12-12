@@ -1,125 +1,84 @@
-# BigQuery MCP Server - Local Run
+# Remote BigQuery MCP Server
 
-This project implements a Model Context Protocol (MCP) server for BigQuery, allowing for conversational analytics and schema inspection. It uses the Google Gen AI Toolbox, the **ADK Framework**, and a FastAPI application to serve the agent.
+This project implements a remote Model Context Protocol (MCP) server for BigQuery, enabling interaction with BigQuery datasets using Google's Generative AI models.
 
-## Prerequisites
+## Remote BigQuery MCP Set Up
 
-- **Python 3.10+**: Ensure Python is installed.
-- **Google Cloud Project**: You need a GCP project with BigQuery enabled.
-- **Unix-based OS**: macOS or Linux (for the toolbox binary).
+To run this, you need to set up  Google Cloud CLI `gcloud` from the terminal and enable some services.
 
+### Prerequisites & Service Enablement
 
-## Installation
-
-1.  **Clone the repository**:
-    Clone this repository into your working directory:
+1.  **Authenticate with Google Cloud**:
     ```bash
-    git clone https://github.com/DhunganaKB/bigquery-mcp-server-demo.git
-    cd bigquery-mcp-server-demo
+    gcloud config set project `<your-project-id>`
+    gcloud auth application-default login
     ```
 
-2.  **Download the Gen AI Toolbox**:
-    This is also know as MCP Toolbox for Databases. Run the following commands to download the appropriate binary for your OS.
-
-    **For macOS (Apple Silicon/M1/M2/M3):**
+2.  **Set Project ID**:
+    In your terminal, set your project ID variable:
     ```bash
-    export VERSION=v0.22.0
-    export OS="darwin/arm64"
-    curl -o toolbox "https://storage.googleapis.com/genai-toolbox/$VERSION/$OS/toolbox"
-    chmod +x toolbox
+    PROJECT_ID=<your-project-id>
     ```
 
-    **For macOS (Intel):**
+3.  **Enable Required Services**:
+    Run the following commands to enable Vertex AI, API Keys, and the BigQuery MCP service:
     ```bash
-    export VERSION=v0.22.0
-    export OS="darwin/amd64"
-    curl -o toolbox "https://storage.googleapis.com/genai-toolbox/$VERSION/$OS/toolbox"
-    chmod +x toolbox
+    gcloud services enable aiplatform.googleapis.com --project=$PROJECT_ID
+    gcloud services enable apikeys.googleapis.com --project=$PROJECT_ID
+    gcloud beta services mcp enable bigquery.googleapis.com --project=$PROJECT_ID
     ```
 
-    **For Linux:**
+### Environment Configuration
+
+Create a `.env` file in the root of this directory with the following content:
+
+For Vertex AI Run:
+
+```env
+GOOGLE_GENAI_USE_VERTEXAI=1
+GOOGLE_CLOUD_PROJECT=<your-project-id>
+GOOGLE_CLOUD_LOCATION=global
+```
+
+For Gemini Developer API Run:
+
+```env
+GOOGLE_API_KEY=<your-api-key>
+```
+
+### Verification
+
+1.  **Check if MCP is Enabled**:
+    Verify that the BigQuery MCP service is enabled for your project:
     ```bash
-    export VERSION=v0.22.0
-    export OS="linux/amd64"
-    curl -o toolbox "https://storage.googleapis.com/genai-toolbox/$VERSION/$OS/toolbox"
-    chmod +x toolbox
+    PROJECT_ID=$(gcloud config get-value project)
+    gcloud beta services mcp list --enabled --project="$PROJECT_ID" \
+      --format="value(name)"
     ```
 
-    **For Windows:**
+    If it is not enabled, run:
     ```bash
-    export VERSION=v0.22.0
-    export OS="windows/amd64"
-    curl -o toolbox.exe "https://storage.googleapis.com/genai-toolbox/$VERSION/$OS/toolbox.exe"
+    gcloud beta services mcp enable bigquery.googleapis.com --project="$PROJECT_ID"
     ```
 
+2.  **Test Connection**:
+    You can verify the connection to the MCP server using `curl`.
+    
+    First, verify the URL is correct:
+    `BIGQUERY_MCP_URL = "https://bigquery.googleapis.com/mcp"`
 
-    **Verify installation:**
+    Then, run the following command:
     ```bash
-    ./toolbox --version
+    ACCESS_TOKEN=$(gcloud auth print-access-token)
+
+    curl -i \
+      -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H "x-goog-user-project: $PROJECT_ID" \
+      -H "Content-Type: application/json" \
+      https://bigquery.googleapis.com/mcp
     ```
 
-3.  **Install Python Dependencies**:
-    It is recommended to use a virtual environment.
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
-    ```
+## Reference
 
-## Configuration
-
-1.  **Environment Variables**:
-    *   Copy the example environment file to a new file named `.env`:
-        ```bash
-        cp .env_example .env
-        ```
-    *   Open `.env` and provide a valid `GOOGLE_API_KEY`.
-
-        ```
-2.  **App Configuration (`constants.py`)**:
-    Open `constants.py` and update the following:
-    *   **`PROJECT_ID`**: Replace `"project_id"` with your actual Google Cloud Project ID (the one linked to your billing account).
-    *   **`LOCATION`**: Ensure this matches your BigQuery dataset location (e.g., `"us-central1"`).
-    *   **`TABLES`**: Update the list of tables with your specific `dataset` and `table` names.
-
-3.  **Tools Configuration (`tools.yaml`)**:
-    Open `tools.yaml` and update the `PROJECT_ID` and `LOCATION` fields to match your configuration in `constants.py`.
-    *   `PROJECT_ID`: Your Google Cloud Project ID.
-    *   `LOCATION`: Your BigQuery location.
-
-## Usage
-
-1.  **Run the FastAPI Application**:
-    Start the server using `uvicorn`.
-    ```bash
-    uvicorn main:app --reload
-    ```
-
-2.  **Access the API**:
-    The API will be available at `http://127.0.0.1:8000`.
-    - **POST /query**: Send a natural language question to analyze your BigQuery data.
-
-    **Example Request:**
-    ```json
-    {
-      "question": "Give me 10 different zip codes randomly.",
-      "user_id": "test_user",
-      "session_id": "test_session"
-    }
-    ```
-
-    **Example Response:**
-    ```json
-    {
-      "answer": "Here are 10 random zip codes from the `school_location` table: 13210-1687, 40422-1394, 85283, 04106-1698, 46805, 90301-2904, 76904, 52803-2898, 33033-1412, 77477-0000\\n\\nSQL used:\\n```sql\\nSELECT DISTINCT zip FROM `long-arcadia-475313-s8.ADKPractice.school_location` ORDER BY RAND() LIMIT 10\\n```",
-      "sql": "SELECT DISTINCT zip FROM `long-arcadia-475313-s8.ADKPractice.school_location` ORDER BY RAND() LIMIT 10"
-    }
-    ```
-
-## Project Structure
-
-- `main.py`: The FastAPI application entry point and endpoint definitions.
-- `agent.py`: Configuration of the LLM agent and MCP toolset.
-- `constants.py`: Project constants like Project ID, Location, and Table definitions.
-- `tools.yaml`: Definition of BigQuery MCP tools (Data Insights, Table Info, etc.).
-- `toolbox`: The binary executable for the Gen AI Toolbox (must be downloaded).
+For more detailed steps and information, please refer to the original Google MCP repository:
+[https://github.com/google/mcp.git](https://github.com/google/mcp.git)

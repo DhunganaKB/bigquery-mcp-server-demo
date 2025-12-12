@@ -1,7 +1,6 @@
 fastapi
-uvicorn
-google-genai
-google-adk
-mcp
+uvicorn[standard]
 python-dotenv
-pydantic
+google-adk
+google-genai
+mcp
