@@ -14,8 +14,8 @@ This project implements a Model Context Protocol (MCP) server for BigQuery, allo
 1.  **Clone the repository**:
     Clone this repository into your working directory:
     ```bash
-    git clone <your-repo-url>
-    cd BigqueryMCP
+    git clone https://github.com/DhunganaKB/bigquery-mcp-server-demo.git
+    cd bigquery-mcp-server-demo
     ```
 
 2.  **Download the Gen AI Toolbox**:
