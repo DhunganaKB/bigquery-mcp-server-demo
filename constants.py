@@ -16,11 +16,11 @@ MODEL_NAME = "gemini-2.0-flash"
 # This list is used to inform the agent about which tables it can query.
 TABLES = [
     {
-        "dataset": "ADKPractice",
+        "dataset": "dataset_name",
         "table": "bbc_news_fulltext",
     },
     {
-        "dataset": "ADKPractice",
+        "dataset": "dataset_name",
         "table": "school_location",
     },
     # add more here:
